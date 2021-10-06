@@ -1,2 +1,6 @@
 # debezium
 This repo is going to be used to learn about Debezium
+
+
+
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @register-mysql.json
