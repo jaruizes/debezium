@@ -24,6 +24,15 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
     volumes:
       - "${PWD}/../sql/mysql-inventory.sql:/docker-entrypoint-initdb.d/1.sql"
+#  db2:
+#    image: db2server:openexpo
+#    ports:
+#      - 50000:50000
+#    privileged: true
+#    environment:
+#      - LICENSE=accept
+#      - DBNAME=TESTDB
+#      - DB2INST1_PASSWORD=Password!
   postgresql:
     image: postgres:11
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
@@ -40,30 +49,30 @@ services:
     restart: always
     ports:
       - 8080:8080
-  kafkdrop:
-    image: obsidiandynamics/kafdrop
-    ports:
-      - 8081:8081
-    depends_on:
-      - zookeeper
-      - kafka
-    environment:
-      - KAFKA_BROKERCONNECT=kafka:9092
-      - SERVER_SERVLET_CONTEXTPATH=/
-      - SERVER_PORT=8081
-#  kafka-ui:
-#    image: provectuslabs/kafka-ui:latest
+#  kafkdrop:
+#    image: obsidiandynamics/kafdrop
 #    ports:
-#      - 9081:9081
+#      - 8081:8081
 #    depends_on:
+#      - zookeeper
 #      - kafka
 #    environment:
-#      - SERVER_PORT=9081
-#      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-#      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
-#      - KAFKA_CLUSTERS_0_NAME=local
+#      - KAFKA_BROKERCONNECT=kafka:9092
+#      - SERVER_SERVLET_CONTEXTPATH=/
+#      - SERVER_PORT=8081
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 9081:9081
+    depends_on:
+      - kafka
+    environment:
+      - SERVER_PORT=9081
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+      - KAFKA_CLUSTERS_0_NAME=local
   connect:
-    image: debezium/connect:${DEBEZIUM_VERSION}
+    image: debezium/connect
     ports:
       - 8083:8083
     depends_on:
@@ -76,3 +85,11 @@ services:
       - CONFIG_STORAGE_TOPIC=my_connect_configs
       - OFFSET_STORAGE_TOPIC=my_connect_offsets
       - STATUS_STORAGE_TOPIC=my_connect_statuses
+  debezium-ui:
+    image: debezium/debezium-ui:latest
+    ports:
+      - 9080:8080
+    depends_on:
+      - connect
+    environment:
+      - KAFKA_CONNECT_URI=http://connect:8083

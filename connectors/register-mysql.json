@@ -9,8 +9,11 @@
     "database.password": "dbz",
     "database.server.id": "184054",
     "database.server.name": "mysql",
-    "database.include": "app1",
+    "database.include.list": "app1",
     "database.history.kafka.bootstrap.servers": "kafka:9092",
-    "database.history.kafka.topic": "schema-changes.app1"
+    "database.history.kafka.topic": "mysql-schema-changes.app1"
   }
 }
+
+
+
