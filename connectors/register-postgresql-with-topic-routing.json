@@ -1,5 +1,5 @@
 {
-  "name": "postgresql-connector",
+  "name": "postgresql-connector-with-topic-routing",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
     "tasks.max": "1",
@@ -12,6 +12,7 @@
     "schema.include": "app2",
     "plugin.name": "pgoutput",
     "publication.autocreate.mode": "filtered",
+    "slot.name": "debezium2",
     "transforms": "Reroute",
     "transforms.Reroute.type": "io.debezium.transforms.ByLogicalTableRouter",
     "transforms.Reroute.topic.regex": "(.*)customers(.*)",

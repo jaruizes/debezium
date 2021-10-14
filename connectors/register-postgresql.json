@@ -11,6 +11,7 @@
     "database.server.name": "postgresql",
     "schema.include": "app2",
     "plugin.name": "pgoutput",
-    "publication.autocreate.mode": "filtered"
+    "publication.autocreate.mode": "filtered",
+    "slot.name": "debezium"
   }
 }
