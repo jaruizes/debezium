@@ -1,62 +1,121 @@
 # Debezium Starter Kit
-En este repositorio se puede encontrar una PoC lista para poder empezar a trabajar con Debezium. La versión seleccionada es la 1.7.
+In this repository you'll find different pre-built examples to start to work with Debezium
 
 ## Features
-Dentro de las features que podrás encontrar en la PoC se encuentran:
+The features implemented are the following ones:
 
-- Entorno local usando Docker Compose
-- Replicación desde los siguientes orígenes de datos: MySQL y Postgresql
-- Kafka UI para que puedas ver los mensajes de replicación que llegan a Kafka
-- Debezium UI, liberada en la versión 1.7 de Debezium, para gestionar los conectores de forma gráfica
-- Adminer, para poder realizar cambios en base de datos sin necesitar ningún cliente adicional
+- **Simple replication**
+
+  Example to implement a simple replication between two sources (MySQL and Postgresql) and Kafka. Besides that, a simple transformation and a transformation chain is also included
+  
+- **Transformations**
+
+  Example to implement a simple transformation and a transformation chain
+
+- **Replication using Avro and Confluent Schema Registry**
+
+  Example of replication between two sources (MySQL and Postgresql) and Kafka using Avro and Confluent Schema Registry
+  
+- **Replication using Avro and Apicurio Schema Registry (Red Hat)**
+
+  Example of replication between two sources (MySQL and Postgresql) and Kafka using Avro and Apicurio Schema Registry
+  
+
+
+
+All of the examples are implemented using Docker Compose and provide these tools:
+
+- **[Kafka UI](https://github.com/provectus/kafka-ui)**: tool to explore Kafka topics and messages sent by Debezium. This tool is running at http://localhost:9081
+- **[Debezium UI](https://debezium.io/documentation/reference/operations/debezium-ui.html)**, to visualize and manage conectors. This tool will be running at http://localhost:9080
+- **[Adminer](https://www.adminer.org/)**, to perform database operations directly. This tool will be running at http://localhost:8080
 
 <br/>
 
-## Puesta en marcha
 
-La puesta en marcha es muy sencilla. Simplemente, desde la raíz del proyecto, tienes que ejecutar:
+
+## Set-up the examples
+
+The repository is organized around the folder "examples". In that folder, you'll find a subfolder for each example. Each subfolder contains three files:
+
+- **setup_infra.sh** : script used to create the necessary infrastructure (using Docker Compose)
+- **destroy_infra.sh**: script used to destroy the created infrastructure
+- **register_connectors.sh**: script used to register the connectors used in the example
+
+
+
+For instance, if you want to execute the example related to "**Replication using Avro and Confluent Schema Registry**", you must follow these steps:
 
 ````shell
-docker-compose --env-file ./infra/config/.env up
+cd examples/avro_confluent-schema-registry
+sh setup_infra.sh
 ````
 
-** Puedes añadir el modificador "-d" si quieres que se ejecute en background.
+
+
+Once the infrastructure is up and running, to register the connectors, just execute:
+
+````shell
+cd examples/avro_confluent-schema-registry
+sh register_connectors.sh
+````
 
 
 
-Una vez levantado todo (tarda unos minutos) tendremos disponibles las siguientes URLs:
+Finally, to destroy the infrastructure, execute:
 
-- Kakfa (Broker): http://localhost:9092
-- Kakfa UI: http://localhost:9081
-- Adminer: http://localhost:8080
-- Debezium UI: http://localhost:9080
-- Kafka Connect: http://localhost:8083
+````shell
+cd examples/avro_confluent-schema-registry
+sh destroy_infra.sh
+````
 
-<br/>
 
-<br/>
 
-## Jugando con Debezium
+<br/><br/>
 
-En este momento tenemos levantado el entorno pero no hemos hecho nada con Debezium. 
-Si accedemos a la UI de Debezium, nos dirá que no hay ningún conector registrado:
+## Playing with Debezium
+
+In the following sections we're going different examples using Debezium. 
+
+
+
+### Simple replication
+
+In this example we're going to show how Debezium works, implementing a simple replication from two sources (MySQL and Postgresql) and Kafka. As I said in the setup section, to create the infrastucture, execute:
+
+````shell
+cd examples/simple
+sh setup_infra.sh
+````
+
+
+
+Once the containers are up and running, you can register all the connector using the script defined in "*examples/simple/register_connectors.sh*" and skip the following section or, if you want to see in detail how to work with Debezium and to register connectors, keep reading.
+
+
+
+#### Registering connectors
+
+if we open [Debezium UI](http://localhost:9080), we'll see that there is no connectors registered:
 
 ![debezium_empty](doc/img/debezium_empty.jpg)
 
 
 
-Si accedemos a la URL de KafkaUI veremos que no hay topics relacionados con replicación con Debezium. Únicamente veremos los relacionados con Kafka Connect:
+If we also open Kafka UI, we'll see there are no topics related to Debezium. We will only see some topics related to Kafka Connect::
 
 ![debezium_empty](doc/img/topics_empty.jpg)
 
 
 
-En los siguientes pasos vamos a ver cómo funciona mediante un ejercicio práctico
+ Now, we're going to register some connectors. To do that, we'll use two different ways to register connectors:
+
+- By using the Kafka Connect API (Rest)
+- By using [Debezium UI](http://localhost:9080)
 
 <br/>
 
-### Registrando el conector para MySQL
-El primer paso es registrar un conector de Debezium para indicar qué queremos establecer CDC desde un orígen a Kafka. En este caso, el origen es MySQL. Los datos de configuración del conector se encuentran en el fichero "connectors/register-mysql.json":
+##### MySQL connector
+We'll use the API instead of Debezium UI. Connectors are defined by a JSON file where we indicate some configuration properties. The file associated to our MySQL connector is placed at "examples/simple/connectors/register-mysql.json":
 
 ````shell
 {
@@ -77,19 +136,17 @@ El primer paso es registrar un conector de Debezium para indicar qué queremos e
 }
 ````
 
+If you want to get more info about the different properties, check [MySQL connector documentation at Debezium](https://debezium.io/documentation/reference/1.7/connectors/mysql.html#mysql-connector-properties).
 
-
-El detalle sobre las distintas propiedades la puedes encontrar en la [documentación del conector de MySQL de Debezium](https://debezium.io/documentation/reference/1.7/connectors/mysql.html#mysql-connector-properties).
-
-Una vez que hemos definido el fichero de configuración, vamos a registrar el conector mediante el API de Kafka Connect. Para ello, lanzamos a siguiente llamada al API Rest de Kafka Connect:
+Once we've defined the configuration file associated to our connector (MySQL), we register it by calling to Kafka Connect Rest API executing this command from "examples/simple" folder:
 
 ````shell
-curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @register-mysql.json
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-mysql.json
 ````
 
 
 
-Deberíamos recibir como respuesta algo como lo siguiente:
+If the operation is correct, we'll get a "201 status" response and the location of the connector (http://localhost:8083/connectors/mysql-connector):
 
 ````shell
 HTTP/1.1 201 Created
@@ -104,72 +161,75 @@ Server: Jetty(9.4.39.v20210325)
 
 
 
-En la respuesta nos está diciendo que el conector se ha creado correctamente (status 201) y que se ha registrado en "http://localhost:8083/connectors/mysql-connector". Si accedemos ahora al UI de Debezium veremos que nos aparece el conector y que está "running":
+We can also check if the connector is registered and it's running by accesing to [Debezium UI](http://localhost:9080):
 
 ![debezium_empty](doc/img/mysql_connector_running.jpg)
 
 
 
-Podemos comprobarlo accediendo a Kafka UI. Veremos que aparecen topic nuevos: 
+When the connector starts, it gets an snapshot of the information existing in the tables configured in the JSON file ("database.include.list": "app1") and sends the messages associated to that snapshot to Kafka. If we go to [Kafka UI](http://localhost:9081), we'll see new topics: 
 
 ![debezium_empty](doc/img/topics_mysql.jpg)
 
-Si accedemos al topic "mysql.app1.customers", veremos que tiene 4 mensajes:
+
+
+The topic containing the snapshot is "mysql.app1.customers". If we check the messages in this topic, we'll get four messages. Each message is generated from each row:
 
 ![debezium_empty](doc/img/mysql_snapshot_messages.jpg)
 
 
 
-Estos mensajes no son cambios sino que corresponden al snapshot que ha hecho Debezium de la tabla que hemos configurado en el conector
-
 <br/>
 
-### Realizando cambios en MySQL
+##### Making changes in MySQL to generate events
 
-Ahora vamos a hacer cambios en MySQL para ver cómo Debezium lo replica en Kafka. Para ello, accedemos a la [consola de Adminer](http://localhost:8080) e introducimos los datos de conexión a MySQL:
-- Servidor: mysql
+To check how Debezium manages changes we're going to make some changes in MySQL data. To perform these actions we'll use [Adminer](http://localhost:8080). To connect to MySQL, we'll need this information:
+
+- Server: mysql
 - User / Pass: user1 / user1
-- Base de datos: testdb
+- Database: testdb
 
 ![debezium_empty](doc/img/adminer_mysql.jpg)
 
 
 
-Una vez dentro, podemos hacer cualquier acción sobre la tabla "customers". Por ejemplo, vamos a añadir un registro:
+Once we've connected to MySQL, we're going to add a new register:
 
 ![debezium_empty](doc/img/mysql_new_customer.jpg)
 
-y a editar otro, añadiendo "(Updated) en el nombre":
+and then, we'll modify another one adding "(Updated)" to the "first_name" data:
 
 ![debezium_empty](doc/img/mysql_update_customer.jpg)
 
 
 
-Si todo ha ido bien, Debezium habrá propagado los cambios a Kafka. Si volvemos ahora a [Kafka UI](http://localhost:9081/) y entramos al topic "mysql.app1.customers" veremos dos mensajes más. El primero, nos indica que se ha insertado un registro (op: c) y los datos del nuevo registro (After):
+If everything is Ok (sure it is), Debezium will get those two changes and it'll send them to Kafka. To check it, we access to [Kafka UI](http://localhost:9081/) and open the topic "mysql.app1.customers". We'll see that there are two messages more. 
+
+The first one is associated to the insert action. In the payload of the message we can check the type of the operation ("op: 'c'") and the content of the new registry("After"):
 
 ![debezium_empty](doc/img/mysql_msg_new_customer.jpg)
 
 
 
-El segundo nos indica que se ha modificado un registro (op: u), disponiendo en el mensaje de los datos que había antes del cambio (Before) y el resultado del cambio (After):
+The second one is associated to the update action. If we examine the payload, we'll see that the operation is "update" (op: u) and, in update operations we can get the content before the update action ("Before") and the content after the update action ("After"):
 
 ![debezium_empty](doc/img/mysql_msg_update_customer.jpg)
 
-A partir de aquí, podéis jugar con los datos en MySQL y ver cómo Debezium replica los cambios.
+
+
+Now, you can keep making changes to see how Debezium works with the different operations.
 
 <br/><br/>
 
-### Registrando el conector para Postgresql usando Debezium UI
+#### Using Debezium UI to register a connector
 
-En este caso no vamos a registrar el conector mediante el API Rest sino que vamos a usar la UI que el equipo de Debezium ha introducido en la última versión. 
-
-Para ello, accedemos a [Debezium UI](http://localhost:9080/) y veremos que el conector de MySQL está registrado. Para registrar el conector de Postgresql, pulsamos en "Create a Conector" y accederemos al wizard. El primer paso es elegir el tipo de conector (postgresql):
+In this case, instead of using the Kafka Connect Rest API, we're going to use Debezium UI to register a connector to replicate changes from Postgresql to Kafka. The first step is to open [Debezium UI](http://localhost:9080/) and click into "Create a Conector" to start the wizard. We select "PostgreSQL" as connector type and click "Next":
 
 ![debezium_empty](doc/img/psql_wizard_1.jpg)
 
 
 
-Pulsamos siguiente y pasamos a rellenar los datos del conector. Los podemos sacar del fichero "connectors/register-postgresql.json" de este repositorio (si quisiéramos registrar el conector vía API Rest usaríamos este fichero de la misma forma que lo hicimos con el conector de MySQL). Los datos son:
+Now, we have to fill the connector configuration data:
 
 - **Connector name**: postgresql-connector
 - **Namespace**: postgresql
@@ -179,95 +239,97 @@ Pulsamos siguiente y pasamos a rellenar los datos del conector. Los podemos saca
 - **Password**: dbz
 - **Database**: postgresql
 
+You can also get them from the file "examples/simple/connectors/register-postgresql.json" (if we would want to register the connector calling the Kafka Connect Rest API as we did with the MySQL connector, we'd use this json file).
 
-
-En Advanced, elegimos como plugin "pgoutput" ya que nuestro Postgresql de la PoC, es un Postgresql 11 "puro" y no dispone de las librerías necesarias para los otros plugins que permite Debezium. La pantalla queda así:
+We have to open "Advanced Properties" panel and choose "pgoutput" as plugin because we are using a "raw" Postgresql in this repository, without libs requested by the other plugins;
 
 ![debezium_empty](doc/img/psql_wizard_2.jpg)
 
-Pulsamos "Validate" y si todo está bien pasaremos al paso donde podemos seleccionar qué esquemas y tablas queremos capturar. En nuestro caso, escribimos "app2" en el apartado correspondiente al esquema y pulsamos "Apply" para que tenga en cuenta el esquema seleccionado:
+
+
+Then, we click "Validate". If everything is OK, the next step is to select which schemas and tables are we going to replicate. We write "app2" for the schema because we want to capture all the tables in that schema. Then, click "Apply" to consolidate the information:
 
 ![debezium_empty](doc/img/psql_wizard_3.jpg)
 
 
 
-A continuación pulsamos en "Review and Finish" para ir a la pantalla de revisión del conector: 
+Then, we have to click "Review and Finish" to go to the final step: 
 
 ![debezium_empty](doc/img/psql_wizard_4.jpg)
 
 
 
-Por último, pulsamos "Finish" para crear el conector. Nos aparecerá, junto al de MySQL, como "Running":
+Click "Finish" to finally create the connector. We should have now two connectors running: the previous one to replicate data from MySQL and this one, to replicate data from Postgresql:
 
 ![debezium_empty](doc/img/psql_wizard_5.jpg)
 
 
 
-Si accedemos a [Kafka UI](http://localhost:9081/), veremos que se ha creado un nuevo topic, "postgresql.app2.customers", que contiene cuatro mensajes y que, al igual que en el caso de MySQL, son los correspondientes al snapshot inicial de la información que existe en la tabla "customers"
+Besides that, if we go to [Kafka UI](http://localhost:9081/), we'll find a new topic, "postgresql.app2.customers", containing four messages. As  que contiene cuatro mensajes y que, al igual que en el caso de MySQL, son los correspondientes al snapshot inicial de la información que existe en la tabla "customers"
 
 ![debezium_empty](doc/img/topic_psql.jpg)
 
 <br/>
 
-### Realizando cambios en Postgresql
+##### Making changes in Postgresql
 
-Como hicimos en el apartado correspondiente a MySQL, vamos a hacer cambios en Postgresql para ver cómo Debezium lo replica en Kafka. Para ello, accedemos a la [consola de Adminer](http://localhost:8080) e introducimos los datos de conexión de Postgresql:
+As we did in the section related to MySQL, we're going to use [Adminer](http://localhost:8080) to make changes in Postgresql to see how Debezium works. We need to introduce the following data to connect to Postgresql:
 
-- Servidor: postgresql
+- Server: postgresql
 - User / Pass: user2 / user2
-- Base de datos: postgresql
+- Database: postgresql
 
 ![debezium_empty](doc/img/adminer_psql.jpg)
 
 
 
-Una vez dentro tenemos que seleccionar el esquema:
+Then, we must select the schema "app2":
 
 ![debezium_empty](doc/img/adminer_psql_esquema.jpg)
 
 
 
-Una vez seleccionado, vamos a hacer lo mismo que en el caso de MySQL: crear un registro y modificar otro. Para crear un nuevo registro, hacemos click en customers y luego en "Nuevo Registro":
+Now, we're going to add a new register and to modify another one. To insert a new row, click on "Nuevo Registro":
 
 ![debezium_empty](doc/img/adminer_psql_new_record.jpg)
 
 
 
-Rellenamos los datos y guardamos:
+Fill all the fields and save:
 
 ![debezium_empty](doc/img/adminer_psql_new_customer.jpg)
 
 
 
-Por otro lado, modificamos uno existente, añadiendo "(Updated)" en el nombre:
+Then, we modify another one, adding "(Updated)" to "first_name":
 
 ![debezium_empty](doc/img/adminer_psql_update_customer.jpg)
 
-Si todo ha ido correctamente, Debezium habrá propagado los cambios a Kafka. Para comprobarlo, accedemos de nuevo a [Kafka UI](http://localhost:9081/) y en el topic "postgresql.app2.customers" veremos que hay dos mensajes nuevos:
+If everything is ok, Debezium will send these changes to Kafka. To check it, go to [Kafka UI](http://localhost:9081/), open the topic "postgresql.app2.customers" and you'll find two new messages:
 
 ![debezium_empty](doc/img/psql_new_messages.jpg)
 
 
 
-El primero, es el correspondiente al nuevo cliente (op "c"), y podemos ver los datos del cliente (After):
+The first one was generated from the insert action ("op:c"). The data of the new register is in the "After" property:
 
 ![debezium_empty](doc/img/psql_msg_new_customer.jpg)
 
 
 
-El segundo, es el correspondiente a la actualización (op: "u") en el que podemos ver el estado anterior al cambio (Before) y los nuevos valores (After):
+The second one was generated from the update action ("op: u") and we can find the data before the update action ("Before" property) and after the action ("After" property):
 
 ![debezium_empty](doc/img/psql_msg_update_customer.jpg)
 
 
 
-A partir de aquí, podéis jugar con los datos en Postgresql y ver cómo Debezium replica los cambios.
 
 
+### Transformations
 
-### Implementando una transformación sencilla sobre Postgresql
+#### Simple transformation
 
-Vamos a registrar un nuevo conector sobre Postgresql que realiza una pequeña transformación, de enrutado, enviando los cambios realizados en Postgresql al topic "customers_from_legacy". Para ello, sobre el conector de Postgresql, añadimos las siguientes líneas:
+We're going to register a new connector to make a simple routing transformation, sending changes in Postgresql to the custom topic "customers_from_legacy" instead of "postgresql.app2.customers". To perform this transformation we need to add the following lines to the previous Postgresql connector:
 
 ````shell
 "transforms": "Reroute",
@@ -278,15 +340,22 @@ Vamos a registrar un nuevo conector sobre Postgresql que realiza una pequeña tr
 
 
 
-En estas líneas estamos diciendo que los mensajes que vayan a ir al topic "postgresql.app2.customers" (por defecto), los envíe al topic "customers_from_legacy". Para ello, registramos el conector con el API lanzando el comando (desde la raíz del proyecto):
+In these lines we are configuring: 
+
+- "transforms": in this property we specify the list of the transformations we are going to do. In our case, just one: "Reroute"
+- "transforms.Reroute.type": we configure that the type of the "Reroute" transformation is "io.debezium.transforms.ByLogicalTableRouter". 
+- "transforms.Reroute.topic.regex": this property is used to set the regular expression to match the current topic where changes are sent. So, all the messages sent to the topics matching the expression will be sent to the custom topic instead of the current one. In our case, "postgresql.app2.customers"
+- "transforms.Reroute.topic.replacement": this property defines the custom topic where the messages will be sent. In our case, "customers_from_legacy"
+
+The complete JSON file is located at "examples/transformations/connectors/register-postgresql-with-topic-routing.json". In order to register, we can execute the script to register all the connectors ("examples/transformations/register_connectors.sh") or we can execute this sentence to register just this one (from "examples/transformations" folder):
 
 ````shell
-curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-topic-routing.json
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-message-filtering-and-topic-routing.json
 ````
 
 
 
-y veremos algo como:
+The result should be a 201 http status:
 
 ```shell
 HTTP/1.1 201 Created
@@ -301,30 +370,30 @@ Server: Jetty(9.4.39.v20210325)
 
 
 
-En la consola de [Debezium UI](http://localhost:9080/) podemos ver el nuevo conector en estado "RUNNING":
+We can also check it in the [Debezium UI](http://localhost:9080/)::
 
 ![debezium_empty](doc/img/dbz_ui_psql_trans_connector.jpg)
 
 
 
-Si entramos en la consola de [Kafka UI](http://localhost:9081/) veremos que se ha creado el topic custom "customers_from_legacy" y que tiene cinco mensajes, que son los correspondientes al snapshot de la tabla:
+And, if we go to [Kafka UI](http://localhost:9081/) we'll see that the new topic "customers_from_legacy" is created and if we click on it to see its messages, we'll see five messages associated to the initial table snapshot:
 
 ![debezium_empty](doc/img/topic_custom.jpg)
 
 
 
-Si hacemos cualquier cambio en Postgresql veremos que Debezium lo propaga tanto al topic "postgresql.app2.customers", debido a que tenemos arriba el primer conector, como al topic custom "customers_from_legacy", debido al nuevo conector. 
+Now, if we make changes in Postgresql, Debezium will send the messages associated to those changes to the topic "customers_from_legacy". As the previous Postgresql connector is also running, message will sent to the topic "postgresql.app2.customers" too.
 
 
 
-### Implementando una cadena de transformación sobre Postgresql
+### Transformation chain
 
-Ahora lo vamos a complicar un poco para ver cómo enlazar dos transformaciones:
+Now, we're going to configure a transformation chain:
 
-1) Vamos a realizar un filtrado para quedamos solo con los cambios asociados a los registros con id igual a 2
-2) Vamos a enviar esos registros a un topic llamado "customers_id_2"
+1) Get only changes with "id" equal to 2
+2) Send those changes with "id" equal to 2 to the custom topic "customers_id_2"
 
-El fichero JSON de definición del conector lo tenemos en "connectors/register-postgresql-with-message-filtering.json" y en él puedes observar la definición de los filtros:
+To configure these transformations we need to include these lines in the first Postgresql connector:
 
 ```json
 "transforms": "FilterById, RerouteCustomTopic",
@@ -336,19 +405,29 @@ El fichero JSON de definición del conector lo tenemos en "connectors/register-p
 "transforms.RerouteCustomTopic.topic.replacement": "customers_id_2"
 ```
 
+<br/>
 
+In these lines we are configuring: 
 
-Se han definido dos filtros: "FilterById", de tipo "io.debezium.transforms.Filter" que implementa el punto 1 y "RerouteCustomTopic", de tipo "io.debezium.transforms.ByLogicalTableRouter" que implementa el punto 2 y que es similar a la transformación que hemos visto anteriormente.
+- "transforms": we set two transformations, and we called "FilterById" and  "RerouteCustomTopic"
+- "transforms.**FilterById**.type": we configure the type of the first one: "io.debezium.transforms.Filter". 
+- "transforms.**FilterById**.language": in this property we say that we are going to define the filter condition using Groovy ("jsr223.groovy")
+- "transforms.**FilterById**.condition": this is the filter condition ("value.after.id == 2") that is take the content value and then, examine the property "id" to the "After" node
+- "transforms.**RerouteCustomTopic**.type": we configure that the type of the "RerouteCustomTopic" transformation is "io.debezium.transforms.ByLogicalTableRouter". 
+- "transforms.**RerouteCustomTopic**.topic.regex": this property is used to set the regular expression to match the current topic where changes are sent. So, all the messages sent to the topics matching the expression will be sent to the custom topic instead of the current one. In this case, "postgresql.app2.customers"
+- "transforms.**RerouteCustomTopic**.topic.replacement": this property defines the custom topic where the messages will be sent. In this case, "customers_id_2"
 
-Para registrar el conector, igual que hemos hecho con otros, vamos a usar el API Rest. Para ello, desde la raíz del proyecto, lanzamos:
+The complete JSON file is located at "*examples/transformations/connectors/register-postgresql-with-message-filtering-and-topic-routing.json*". 
+
+In order to register, we can execute the script to register all the connectors ("*examples/transformations/register_connectors.sh*") or we can execute this sentence to register just this one (from "*examples/transformations*" folder):
 
 ````shell
-curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-message-filtering-and-topic-routing.json
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-topic-routing.json
 ````
 
 
 
-Si todo es correcto, veremos algo como:
+We should receive a 201 status code:
 
 ````shell
 HTTP/1.1 201 Created
@@ -363,49 +442,79 @@ Server: Jetty(9.4.39.v20210325)
 
 
 
-Si accedemos a la [UI de Debezium](http://localhost:9080/), veremos el nuevo conector:
+If we go to  [Debezium UI](http://localhost:9080/) we'll find the new connector:
 
 ![debezium_empty](doc/img/dbz_ui_psql_chain_connector.jpg)
 
 
 
-Si accedemos a [Kafka UI](http://localhost:9081/), veremos que se ha creado el topic "customers_id_2" y que contiene solo un mensaje, correspondiente al registro con id igual a 2:
+And if we go to the [Kafka UI](http://localhost:9081/), we'll see that there is a new topic "customers_id_2" containing only a message because in the snapshot data there is only a customer with id equal two:
 
 ![debezium_empty](doc/img/topics_customer_id_2.jpg)
 
 
 
-Si ahora, por ejemplo, modificamos dos registros de la base de datos, uno con id igual a 2
+If we modify the customer with this id (2) in Postgresql:
 
 ![debezium_empty](doc/img/psql_id2_updated.jpg)
 
- y otro con otro id
+ and other customer with different id:
 
 ![debezium_empty](doc/img/psql_id3_updated.jpg)
 
 
 
-veremos que solo se propaga al topic "" el cambio efectuado sobre el registro con id igual a 2. Si accedemos a Kafka UI, al topic "", vemos que solo hay un mensaje másy que corresponde al cambio con id igual a 2:
+we'll see that Debezium only sends one message to the topic "customers_id_2", the one with id equal to two:
 
 ![debezium_empty](doc/img/topics_msg_id2_updated.jpg)
 
 
 
-#### ¿Qué tiene de "especial" la transformación basada en filtros?
+#### What do I have to keep in mind to configure transformations?
 
-Para poder aplicar la transformación basada en filtros es necesario incluir las librerías correspondientes en la imagen del conector de Kafka Connect. Por ello, puedes ver que se construye una imagnen custom, con las librerías necesarias incluidas. 
+To perform transformations you need to include some libs in the Kafka Connector (for instance Groovy). In this repository, the Kafka Connect image is a custom image including these libs. You can check it in the Dockerfile (infra/docker/connect-smt/Dockerfile) 
 
-Tienes más detalle en la [documentación de Debezium sobre este filtro](https://debezium.io/documentation/reference/1.7/transformations/filtering.html).
+You can find more detail in the [Debezium official doc](https://debezium.io/documentation/reference/1.7/transformations/filtering.html).
 
 
 
 <br/>
 
-## Destruyendo el entorno
+### Using Avro
 
-Para destruir el entorno, simplemente tenemos que lanzar el comando:
+In the previous examples we've used JSON and we've not used an schema registry. If we don't configure any serializer, Debezium captures changes in the database, serializes the content using the default serializer (JSON) and sends the message to Kafka. Working with JSON messages is easier to debug but is less efficient than a binary format like Avro. In some use cases, we can need that efficiency. 
+
+Avro messages are more compact avoiding to include the schema in the content of the message because the schema is described in the schema registry. In the following examples, we are going to use Avro working with two different schema registries. In the first example we'll use Confluent Schema Registry and in the second one, we'll use Apicurio. 
+
+
+
+#### Debezium and Confluent Schema Registry
+
+The code associated to this example is in the folder "*examples/avro_confluent-schema-registry*". To create the infrastructure, execute:
+
+```shell
+cd examples/avro_confluent-schema-registry
+sh setup_infra.sh
+```
+
+Basically, we need to specify which converter we're going to use and where the schema registry is:
+
+```shell
+"key.converter": "io.confluent.connect.avro.AvroConverter",
+"value.converter": "io.confluent.connect.avro.AvroConverter",
+"key.converter.schema.registry.url": "http://schema-registry:8081",
+"value.converter.schema.registry.url": "http://schema-registry:8081"
+```
+
+
+
+<br/>
+
+## Destroying the environment
+
+To destroy the environment execute the script "destroy_infra.sh" located in each example folder. For instance, to destroy the infra associated to the first example, execute:
 
 ````shell
-docker-compose down
+sh examples/simple/destroy_infra.sh
 ````
 

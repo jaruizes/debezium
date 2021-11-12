@@ -1,0 +1,24 @@
+{
+  "name": "postgresql-connector-avro-apicurio",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgresql",
+    "database.port": "5432",
+    "database.user": "debezium",
+    "database.password": "dbz",
+    "database.dbname" : "postgresql",
+    "database.server.name": "postgresql-avro-apicurio",
+    "schema.include": "app2",
+    "plugin.name": "pgoutput",
+    "publication.autocreate.mode": "filtered",
+    "slot.name": "debezium",
+    "key.converter": "io.apicurio.registry.utils.converter.AvroConverter",
+    "key.converter.apicurio.registry.url": "http://schema-registry:8080/apis/registry/v2",
+    "key.converter.apicurio.registry.auto-register": "true",
+    "value.converter": "io.apicurio.registry.utils.converter.AvroConverter",
+    "value.converter.apicurio.registry.url": "http://schema-registry:8080/apis/registry/v2",
+    "value.converter.apicurio.registry.auto-register": "true",
+    "value.converter.apicurio.registry.find-latest": "true"
+  }
+}
