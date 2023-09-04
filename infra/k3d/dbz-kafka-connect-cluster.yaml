@@ -1,0 +1,35 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: debezium-connect-cluster
+  annotations:
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: 3.1.0
+  image: public.ecr.aws/k9a0b2l8/debezium-strimzi-postgresql:2.3.2.Final
+  replicas: 1
+  bootstrapServers: pkc-z9doz.eu-west-1.aws.confluent.cloud:9092
+  config:
+    config.providers: secrets
+    config.providers.secrets.class: io.strimzi.kafka.KubernetesSecretConfigProvider
+    group.id: connect-cluster
+    rest.advertised.host.name: "connect"
+    offset.storage.topic: connect-cluster-offsets
+    config.storage.topic: connect-cluster-configs
+    status.storage.topic: connect-cluster-status
+    # -1 means it will use the default replication factor configured in the broker
+    config.storage.replication.factor: -1
+    offset.storage.replication.factor: -1
+    status.storage.replication.factor: -1
+    security.protocol: SASL_SSL
+    sasl.mechanism: PLAIN
+    sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='RKXXIYTO7OZGIXL2' password='7dax40ptS0MhprbtFBUn6/jIQXWgZw5jw8xzSdvIRvZAPMXgAKKids/XFrJW0ala';"
+    producer.security.protocol: SASL_SSL
+    producer.sasl.mechanism: PLAIN
+    producer.sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='RKXXIYTO7OZGIXL2' password='7dax40ptS0MhprbtFBUn6/jIQXWgZw5jw8xzSdvIRvZAPMXgAKKids/XFrJW0ala';"
+    consumer.security.protocol: SASL_SSL
+    consumer.sasl.mechanism: PLAIN
+    consumer.sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='RKXXIYTO7OZGIXL2' password='7dax40ptS0MhprbtFBUn6/jIQXWgZw5jw8xzSdvIRvZAPMXgAKKids/XFrJW0ala';"
+    admin.security.protocol: SASL_SSL
+    admin.sasl.mechanism: PLAIN
+    admin.sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username='RKXXIYTO7OZGIXL2' password='7dax40ptS0MhprbtFBUn6/jIQXWgZw5jw8xzSdvIRvZAPMXgAKKids/XFrJW0ala';"
