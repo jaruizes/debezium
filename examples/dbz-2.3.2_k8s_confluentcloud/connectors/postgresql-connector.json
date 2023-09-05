@@ -1,0 +1,19 @@
+{
+  "name": "postgresql-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres.default.svc.cluster.local",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "pgpass",
+    "database.dbname" : "postgres",
+    "schema.include.list": "app",
+    "topic.prefix": "cdc",
+    "publication.autocreate.mode": "filtered",
+    "slot.name": "debezium",
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "3",
+    "topic.creation.default.partitions": "1"
+  }
+}

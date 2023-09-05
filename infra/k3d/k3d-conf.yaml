@@ -4,6 +4,9 @@ metadata:
   name: k8s-cluster
 servers: 1
 ports:
-  - port: 8080:80
+  - port: 8080:8080
+    nodeFilters:
+      - loadbalancer
+  - port: 8083:8083
     nodeFilters:
       - loadbalancer

@@ -1,13 +1,26 @@
 # Debezium Starter Kit
 In this repository you'll find different pre-built examples to start to work with Debezium
 
-## Features
+
+
+## (NEW!!!) Features (Debezium in Kubernetes)
+
+- **Debezium 2.3.2 Kubernetes deployment**
+
+​		Example of replication between Postgresql and Confluent Cloud. 
+
+
+
+<br/>
+
+## Features (implemented using Docker Compose)
+
 The features implemented are the following ones:
 
 - **Simple replication**
 
   Example to implement a simple replication between two sources (MySQL and Postgresql) and Kafka. Besides that, a simple transformation and a transformation chain is also included
-  
+
 - **Transformations**
 
   Example to implement a simple transformation and a transformation chain
@@ -15,66 +28,231 @@ The features implemented are the following ones:
 - **Replication using Avro and Confluent Schema Registry**
 
   Example of replication between two sources (MySQL and Postgresql) and Kafka using Avro and Confluent Schema Registry
-  
+
 - **Replication using Avro and Apicurio Schema Registry (Red Hat)**
 
   Example of replication between two sources (MySQL and Postgresql) and Kafka using Avro and Apicurio Schema Registry
+
   
 
-
-
-All of the examples are implemented using Docker Compose and provide these tools:
+All the examples implemented using **Docker Compose** also provide these tools:
 
 - **[Kafka UI](https://github.com/provectus/kafka-ui)**: tool to explore Kafka topics and messages sent by Debezium. This tool is running at http://localhost:9081
 - **[Debezium UI](https://debezium.io/documentation/reference/operations/debezium-ui.html)**, to visualize and manage conectors. This tool will be running at http://localhost:9080
 - **[Adminer](https://www.adminer.org/)**, to perform database operations directly. This tool will be running at http://localhost:8080
-
-<br/>
-
-
-
-## Set-up the examples
-
-The repository is organized around the folder "examples". In that folder, you'll find a subfolder for each example. Each subfolder contains three files:
-
-- **setup_infra.sh** : script used to create the necessary infrastructure (using Docker Compose)
-- **destroy_infra.sh**: script used to destroy the created infrastructure
-- **register_connectors.sh**: script used to register the connectors used in the example
-
-
-
-For instance, if you want to execute the example related to "**Replication using Avro and Confluent Schema Registry**", you must follow these steps:
-
-````shell
-cd examples/avro_confluent-schema-registry
-sh setup_infra.sh
-````
-
-
-
-Once the infrastructure is up and running, to register the connectors, just execute:
-
-````shell
-cd examples/avro_confluent-schema-registry
-sh register_connectors.sh
-````
-
-
-
-Finally, to destroy the infrastructure, execute:
-
-````shell
-cd examples/avro_confluent-schema-registry
-sh destroy_infra.sh
-````
-
-
 
 <br/><br/>
 
 ## Playing with Debezium
 
 In the following sections we're going different examples using Debezium. 
+
+
+
+### (NEW!!!) Simple replication: Kubernetes, Debezium, Postgresql and Confluent Cloud
+
+In this example we're going to show how Debezium works, implementing a simple replication between Postgresql and Confluent Cloud, and deploying Debezium in Kubernetes.
+
+In this example we need a distribution of Kubernetes. For that, we are going to use [K3D](https://k3d.io/v5.6.0/) but you can use Minikube or any cloud distribution like EKS, AKS, GKE, etc...
+
+
+
+#### Creating a new K8s cluster
+
+To create a new cluster, we have to execute this command (remember you need to install K3D before o skip this step if you are going to use other kind of K8s):
+
+````shell
+k3d cluster create --config ./infra/k3d/k3d-conf.yaml
+````
+
+
+
+Once the cluster is created you'll see something like this:
+
+```shell
+INFO[0014] Cluster 'k8s-cluster' created successfully!  
+INFO[0014] You can now use it like this:                
+kubectl cluster-info
+```
+
+
+
+#### Deploying Postgresql and Adminer
+
+In this example we are going to use an "ephemeral Postgresql" deployed to Kubernetes. So, it's necessary to execute this command:
+
+```shel
+kubectl apply -f examples/dbz-2.3.2_k8s_confluentcloud/k8s-manifests/postgresql-db.yaml
+```
+
+
+
+In this deployment, we are also going to deploy **[Adminer](https://www.adminer.org/)**, to perform database operations directly. So, go to http://localhos:8080 :
+
+![adminer_psql_k8s](doc/img/adminer_psql_k8s.jpg)
+
+Enter the connection values:
+
+- Engine: Postgresql
+- Server: postgres.default.svc.cluster.local
+- User: postgres
+- Password: pgpass
+- Database: postgres
+
+
+
+Then, click en SQL Command and paste this script:
+
+```sql
+create schema app;
+
+create table app.customers
+(
+    id serial not null constraint customers_pk primary key,
+    first_name varchar not null,
+    last_name varchar not null,
+    email varchar not null
+);
+
+ALTER TABLE app.customers REPLICA IDENTITY FULL;
+INSERT INTO app.customers (first_name, last_name, email) VALUES ('Sally', 'Thomas', 'sally.thomas@acme.com');
+INSERT INTO app.customers (first_name, last_name, email) VALUES ('George', 'Bailey', 'gbailey@foobar.com');
+INSERT INTO app.customers (first_name, last_name, email) VALUES ('Edward', 'Walker', 'ed@walker.com');
+INSERT INTO app.customers (first_name, last_name, email) VALUES ('Anne', 'Kretchmar', 'annek@noanswer.org');
+```
+
+
+
+![adminer_psql_inserts](doc/img/adminer_psql_inserts.jpg)
+
+Click on "**Execute**":
+
+![adminer_psql_execute_result](doc/img/adminer_psql_execute_result.jpg)
+
+
+
+#### Confluent Cloud 
+
+##### Bootstrap server
+
+The URL of the bootstrap server is in the "Cluster Settings" section:
+
+![cc_bootstrapserver](doc/img/cc_bootstrapserver.jpg)
+
+
+
+We have to copy the url and paste it to the file "*examples/dbz-2.3.2_k8s_confluentcloud/k8s-manifests/dbz-kafka-connect.yaml*":
+
+![cc_bootstrapserver_replace](doc/img/cc_bootstrapserver_replace.jpg)
+
+
+
+##### API Key
+
+In this example you need a Confluent Cloud cluster and an API Key. To create a new API Key, go to "API Keys" section and click on "Create key":
+
+![cc_api_keys_section](doc/img/cc_api_keys_section.jpg)
+
+
+
+
+
+We select "Global Access" and "Next" to create the API Key:
+
+![cc_api_key](doc/img/cc_api_key.jpg)
+
+
+
+We have to copy the key and secret and replace them in the file "*examples/dbz-2.3.2_k8s_confluentcloud/k8s-manifests/dbz-kafka-connect.yaml*"
+
+![cc_api_key_replace](doc/img/cc_api_key_replace.jpg)
+
+
+
+#### Deploying Debezium (Kafka Connect) in Kubernetes
+
+Now, it's time to deploy Debezium to Kubernetes. To do that, execute:
+
+```shell
+kubectl apply -f examples/dbz-2.3.2_k8s_confluentcloud/k8s-manifests/dbz-kafka-connect.yaml
+```
+
+
+
+We have to wait for the pod be ready (it takes one or two minutes)...Once the pod is ready, you can check that the "control topics" are created:
+
+![cc_control_topics](doc/img/cc_control_topics.jpg)
+
+
+
+Now, we have to register the connector to start to replicate data to Postgresql to Confluent Cloud. First, we have to do a port forward to get the pod:
+
+```shell
+kubectl port-forward --namespace default svc/dbz-kafkaconnect-srv 8083:8083
+```
+
+
+
+Then, in other console, execute:
+
+```shell
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" "http://localhost:8083/connectors/" -d @examples/dbz-2.3.2_k8s_confluentcloud/connectors/postgresql-connector.json
+```
+
+
+
+The result should be similar to this:
+
+```bash
+HTTP/1.1 201 Created
+Date: Tue, 05 Sep 2023 16:35:57 GMT
+Location: http://localhost:8083/connectors/postgresql-connector
+Content-Type: application/json
+Content-Length: 583
+Server: Jetty(9.4.48.v20220622)
+
+{"name":"postgresql-connector","config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","tasks.max":"1","database.hostname":"postgres.default.svc.cluster.local","database.port":"5432","database.user":"postgres","database.password":"pgpass","database.dbname":"postgres","schema.include.list":"app","topic.prefix":"cdc","publication.autocreate.mode":"filtered","slot.name":"debezium","topic.creation.enable":"true","topic.creation.default.replication.factor":"3","topic.creation.default.partitions":"1","name":"postgresql-connector"},"tasks":[],"type":"source"}%
+```
+
+
+
+Now, if we go to Confluent Cloud to check the topics, we'll see a new topic containg the data from Postgresql:
+
+![cc_replication_topic](doc/img/cc_replication_topic.jpg)
+
+
+
+And, if we check the messages, we can see the data from Postgresql:
+
+![cc_replication_data](doc/img/cc_replication_data.jpg)
+
+
+
+Now, for instance, we are going to change in Postgresql the last name of this record. We change "Kretchmar" to "Kretchmar Updated":
+
+![postgresql_k8s_data_changed](doc/img/postgresql_k8s_data_changed.jpg)
+
+If we go back to Confluent Cloud and check the messages in the CDC topic, we'll see a new message containing the change:
+
+![postgresql_k8s_cdc](doc/img/postgresql_k8s_cdc.jpg) 
+
+
+
+
+
+
+
+#### Destroying the K8s cluster
+
+To destroy the K8s cluster execute:
+
+```shell
+k3d cluster delete k8s-cluster
+```
+
+
+
+
 
 
 
@@ -518,3 +696,38 @@ To destroy the environment execute the script "destroy_infra.sh" located in each
 sh examples/simple/destroy_infra.sh
 ````
 
+## K3d
+```shell
+k3d cluster create --config ./infra/k3d/k3d-conf.yaml
+kubectl apply -f infra/k3d/postgresql-db.yaml
+
+
+
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+kubectl apply -f infra/k3d/pv.yaml
+
+## Install Postgresql
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install dev-pg bitnami/postgresql --set primary.persistence.existingClaim=pg-pvc,auth.postgresPassword=pgpass,volumePermissions.enabled=true
+
+## Install OLM
+curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.20.0/install.sh | bash -s v0.20.0
+
+## Install Strimzi Operator
+kubectl create -f https://operatorhub.io/install/strimzi-kafka-operator.yaml
+
+
+```
+
+```shell
+## Expose Postgresql (postgres / pgpass)
+export KUBECONFIG=$(k3d kubeconfig write k8s-cluster)
+kubectl port-forward --namespace default svc/dev-pg-postgresql 5432:5432
+```
+
+
+Build image
+```
+curl https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/2.3.2.Final/debezium-connector-postgres-2.3.2.Final-plugin.tar.gz | tar xvz
+```
