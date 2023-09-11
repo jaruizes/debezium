@@ -25,7 +25,7 @@ services:
     volumes:
       - "./sql/mysql-inventory.sql:/docker-entrypoint-initdb.d/1.sql"
   postgresql:
-    image: postgres:11
+    image: postgres:14
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -54,10 +54,9 @@ services:
   connect:
     build:
       context: ./docker/connect-smt
-      args:
-        JMX_AGENT_VERSION: 0.15.0
     ports:
       - 8083:8083
+      - 8778:8778
     depends_on:
       - kafka
       - mysql
@@ -72,9 +71,7 @@ services:
       - INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - ENABLE_APICURIO_CONVERTERS=true
-      - KAFKA_OPTS=-javaagent:/kafka/etc/jmx_prometheus_javaagent.jar=8080:/kafka/etc/config.yml
-      - JMXHOST=localhost
-      - JMXPORT=1976
+      - ENABLE_JOLOKIA=true
   debezium-ui:
     image: debezium/debezium-ui:latest
     ports:
@@ -88,23 +85,3 @@ services:
     image: apicurio/apicurio-registry-mem:2.0.0.Final
     ports:
       - 8081:8080
-  prometheus:
-    build:
-      context: ./docker/debezium-prometheus
-      args:
-        PROMETHEUS_VERSION: v2.26.0
-    ports:
-      - 9090:9090
-    depends_on:
-      - connect
-  grafana:
-    build:
-      context: ./docker/debezium-grafana
-      args:
-        GRAFANA_VERSION: 7.5.5
-    ports:
-      - 3000:3000
-    depends_on:
-      - prometheus
-    environment:
-      - DS_PROMETHEUS=prometheus

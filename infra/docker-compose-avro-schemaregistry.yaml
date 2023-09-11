@@ -25,7 +25,7 @@ services:
     volumes:
       - "./sql/mysql-inventory.sql:/docker-entrypoint-initdb.d/1.sql"
   postgresql:
-    image: postgres:11
+    image: postgres:14
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -54,10 +54,9 @@ services:
   connect:
     build:
       context: ./docker/connect-smt
-      args:
-        JMX_AGENT_VERSION: 0.15.0
     ports:
       - 8083:8083
+      - 8778:8778
     depends_on:
       - kafka
       - mysql
@@ -71,9 +70,7 @@ services:
       - STATUS_STORAGE_TOPIC=my_connect_statuses
       - INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
-      - KAFKA_OPTS=-javaagent:/kafka/etc/jmx_prometheus_javaagent.jar=8080:/kafka/etc/config.yml
-      - JMXHOST=localhost
-      - JMXPORT=1976
+      - ENABLE_JOLOKIA=true
   debezium-ui:
     image: debezium/debezium-ui:latest
     ports:

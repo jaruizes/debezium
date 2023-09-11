@@ -2,7 +2,6 @@
   "name": "register-postgresql-with-message-filtering-and-topic-routing",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "tasks.max": "1",
     "database.hostname": "postgresql",
     "database.port": "5432",
     "database.user": "debezium",
@@ -11,14 +10,17 @@
     "database.server.name": "postgresql",
     "schema.include": "app2",
     "plugin.name": "pgoutput",
-    "publication.autocreate.mode": "filtered",
+    "topic.prefix": "dbz",
     "slot.name": "debezium3",
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "1",
     "transforms": "FilterById, RerouteCustomTopic",
     "transforms.FilterById.type": "io.debezium.transforms.Filter",
     "transforms.FilterById.language": "jsr223.groovy",
     "transforms.FilterById.condition": "value.after.id == 2",
     "transforms.RerouteCustomTopic.type": "io.debezium.transforms.ByLogicalTableRouter",
-    "transforms.RerouteCustomTopic.topic.regex": "postgresql.app2.customers",
+    "transforms.RerouteCustomTopic.topic.regex": "dbz.app2.customers",
     "transforms.RerouteCustomTopic.topic.replacement": "customers_id_2"
   }
 }

@@ -2,7 +2,6 @@
   "name": "postgresql-connector-with-topic-routing",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "tasks.max": "1",
     "database.hostname": "postgresql",
     "database.port": "5432",
     "database.user": "debezium",
@@ -11,11 +10,14 @@
     "database.server.name": "postgresql",
     "schema.include": "app2",
     "plugin.name": "pgoutput",
-    "publication.autocreate.mode": "filtered",
+    "topic.prefix": "dbz",
     "slot.name": "debezium2",
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "1",
     "transforms": "Reroute",
     "transforms.Reroute.type": "io.debezium.transforms.ByLogicalTableRouter",
-    "transforms.Reroute.topic.regex": "(.*)customers(.*)",
+    "transforms.Reroute.topic.regex": "dbz.(.*)customers(.*)",
     "transforms.Reroute.topic.replacement": "customers_from_legacy"
   }
 }

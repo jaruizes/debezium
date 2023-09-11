@@ -300,16 +300,15 @@ We'll use the API instead of Debezium UI. Connectors are defined by a JSON file 
   "name": "mysql-connector",
   "config": {
     "connector.class": "io.debezium.connector.mysql.MySqlConnector",
-    "tasks.max": "1",
     "database.hostname": "mysql",
     "database.port": "3306",
     "database.user": "debezium",
     "database.password": "dbz",
     "database.server.id": "184054",
-    "database.server.name": "mysql",
     "database.include.list": "app1",
-    "database.history.kafka.bootstrap.servers": "kafka:9092",
-    "database.history.kafka.topic": "mysql-schema-changes.app1"
+    "topic.prefix": "dbz",
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
+    "schema.history.internal.kafka.topic": "mysql-schema-changes.app1"
   }
 }
 ````
@@ -351,7 +350,7 @@ When the connector starts, it gets an snapshot of the information existing in th
 
 
 
-The topic containing the snapshot is "mysql.app1.customers". If we check the messages in this topic, we'll get four messages. Each message is generated from each row:
+The topic containing the snapshot is "dbz.app1.customers". If we check the messages in this topic, we'll get four messages. Each message is generated from each row:
 
 ![debezium_empty](doc/img/mysql_snapshot_messages.jpg)
 
@@ -410,6 +409,7 @@ In this case, instead of using the Kafka Connect Rest API, we're going to use De
 Now, we have to fill the connector configuration data:
 
 - **Connector name**: postgresql-connector
+- **Topic prefix**: dbz
 - **Namespace**: postgresql
 - **Hostname**: postgresql
 - **Port**: 5432
@@ -528,7 +528,7 @@ In these lines we are configuring:
 The complete JSON file is located at "examples/transformations/connectors/register-postgresql-with-topic-routing.json". In order to register, we can execute the script to register all the connectors ("examples/transformations/register_connectors.sh") or we can execute this sentence to register just this one (from "examples/transformations" folder):
 
 ````shell
-curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-message-filtering-and-topic-routing.json
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-topic-routing.json
 ````
 
 
@@ -554,7 +554,7 @@ We can also check it in the [Debezium UI](http://localhost:9080/)::
 
 
 
-And, if we go to [Kafka UI](http://localhost:9081/) we'll see that the new topic "customers_from_legacy" is created and if we click on it to see its messages, we'll see five messages associated to the initial table snapshot:
+And, if we go to [Kafka UI](http://localhost:9081/) we'll see that the new topic "customers_from_legacy" is created and if we click on it to see its messages, we'll see some messages associated to the initial table snapshot:
 
 ![debezium_empty](doc/img/topic_custom.jpg)
 
@@ -579,7 +579,7 @@ To configure these transformations we need to include these lines in the first P
 "transforms.FilterById.language": "jsr223.groovy",
 "transforms.FilterById.condition": "value.after.id == 2",
 "transforms.RerouteCustomTopic.type": "io.debezium.transforms.ByLogicalTableRouter",
-"transforms.RerouteCustomTopic.topic.regex": "postgresql.app2.customers",
+"transforms.RerouteCustomTopic.topic.regex": "dbz.app2.customers",
 "transforms.RerouteCustomTopic.topic.replacement": "customers_id_2"
 ```
 
@@ -592,7 +592,7 @@ In these lines we are configuring:
 - "transforms.**FilterById**.language": in this property we say that we are going to define the filter condition using Groovy ("jsr223.groovy")
 - "transforms.**FilterById**.condition": this is the filter condition ("value.after.id == 2") that is take the content value and then, examine the property "id" to the "After" node
 - "transforms.**RerouteCustomTopic**.type": we configure that the type of the "RerouteCustomTopic" transformation is "io.debezium.transforms.ByLogicalTableRouter". 
-- "transforms.**RerouteCustomTopic**.topic.regex": this property is used to set the regular expression to match the current topic where changes are sent. So, all the messages sent to the topics matching the expression will be sent to the custom topic instead of the current one. In this case, "postgresql.app2.customers"
+- "transforms.**RerouteCustomTopic**.topic.regex": this property is used to set the regular expression to match the current topic where changes are sent. So, all the messages sent to the topics matching the expression will be sent to the custom topic instead of the current one. In this case, "dbz.app2.customers"
 - "transforms.**RerouteCustomTopic**.topic.replacement": this property defines the custom topic where the messages will be sent. In this case, "customers_id_2"
 
 The complete JSON file is located at "*examples/transformations/connectors/register-postgresql-with-message-filtering-and-topic-routing.json*". 
@@ -600,7 +600,7 @@ The complete JSON file is located at "*examples/transformations/connectors/regis
 In order to register, we can execute the script to register all the connectors ("*examples/transformations/register_connectors.sh*") or we can execute this sentence to register just this one (from "*examples/transformations*" folder):
 
 ````shell
-curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-topic-routing.json
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @connectors/register-postgresql-with-message-filtering-and-topic-routing.json
 ````
 
 
@@ -696,38 +696,3 @@ To destroy the environment execute the script "destroy_infra.sh" located in each
 sh examples/simple/destroy_infra.sh
 ````
 
-## K3d
-```shell
-k3d cluster create --config ./infra/k3d/k3d-conf.yaml
-kubectl apply -f infra/k3d/postgresql-db.yaml
-
-
-
-kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
-kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-kubectl apply -f infra/k3d/pv.yaml
-
-## Install Postgresql
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm install dev-pg bitnami/postgresql --set primary.persistence.existingClaim=pg-pvc,auth.postgresPassword=pgpass,volumePermissions.enabled=true
-
-## Install OLM
-curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.20.0/install.sh | bash -s v0.20.0
-
-## Install Strimzi Operator
-kubectl create -f https://operatorhub.io/install/strimzi-kafka-operator.yaml
-
-
-```
-
-```shell
-## Expose Postgresql (postgres / pgpass)
-export KUBECONFIG=$(k3d kubeconfig write k8s-cluster)
-kubectl port-forward --namespace default svc/dev-pg-postgresql 5432:5432
-```
-
-
-Build image
-```
-curl https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/2.3.2.Final/debezium-connector-postgres-2.3.2.Final-plugin.tar.gz | tar xvz
-```

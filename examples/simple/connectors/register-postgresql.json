@@ -2,7 +2,6 @@
   "name": "postgresql-connector",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "tasks.max": "1",
     "database.hostname": "postgresql",
     "database.port": "5432",
     "database.user": "debezium",
@@ -11,7 +10,10 @@
     "database.server.name": "postgresql",
     "schema.include": "app2",
     "plugin.name": "pgoutput",
-    "publication.autocreate.mode": "filtered",
-    "slot.name": "debezium"
+    "topic.prefix": "dbz",
+    "slot.name": "debezium",
+    "topic.creation.enable": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "1"
   }
 }
